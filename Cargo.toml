@@ -10,6 +10,7 @@ cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.4"
 defmt = "0.3.7"
 defmt-rtt = "0.4.1"
+max7219 = "0.4.2"
 panic-probe = { version = "0.3.2", features = ["print-defmt"] }
 stm32f1xx-hal = { version = "0.10.0", features = ["stm32f103"] }
 
