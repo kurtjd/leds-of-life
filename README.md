@@ -1,7 +1,7 @@
 # LEDs of Life
 |Front|Back|
-|--------------------------------|------------------------------|
-|[<img src = "pictures/leds_of_life_video.png?raw=true">](https://www.youtube.com/shorts/s3XXKaWJPEc)|<img src = "pictures/leds_of_life_wiring.jpg?raw=true" width="60%" height="60%">|
+|-----|----|
+|[<img src = "pictures/leds_of_life_video.png?raw=true">](https://www.youtube.com/shorts/s3XXKaWJPEc)|<img src = "pictures/leds_of_life_wiring.jpg?raw=true">|
 
 Just something I threw together for fun. John Conway's Game of Life implemented on a 16x16 LED matrix
 powered by a STM32 BluePill board (with Rust firmware!). Click the picture above to see it in action!
