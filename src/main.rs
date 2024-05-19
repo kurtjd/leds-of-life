@@ -6,7 +6,6 @@ mod input;
 mod matrix;
 
 //use defmt::*;
-use {defmt_rtt as _, panic_probe as _};
 use cortex_m_rt::entry;
 use stm32f1xx_hal::{
     adc,
@@ -14,6 +13,7 @@ use stm32f1xx_hal::{
     prelude::*,
     spi::{NoMiso, Spi},
 };
+use {defmt_rtt as _, panic_probe as _};
 
 use game::*;
 use input::*;
@@ -28,7 +28,15 @@ fn main() -> ! {
     // Clocks and timers
     let mut flash = dp.FLASH.constrain();
     let rcc = dp.RCC.constrain();
-    let clocks = rcc.cfgr.freeze(&mut flash.acr);
+
+    // Max SPEED!
+    let clocks = rcc
+        .cfgr
+        .use_hse(8.MHz())
+        .sysclk(72.MHz())
+        .pclk1(36.MHz())
+        .pclk2(72.MHz())
+        .freeze(&mut flash.acr);
     let mut delay = cp.SYST.delay(&clocks);
 
     // GPIO
@@ -42,7 +50,7 @@ fn main() -> ! {
     let left_btn = gpioa.pa9.into_pull_up_input(&mut gpioa.crh);
     let right_btn = gpioa.pa12.into_pull_up_input(&mut gpioa.crh);
     let sel_btn = gpioa.pa10.into_pull_up_input(&mut gpioa.crh);
-    
+
     /* PA15 is initially reserved for JTAG use, but since we are not using it, disable it.
      * We don't need PB3 or PB4 though so throw them away.
      */
@@ -51,7 +59,7 @@ fn main() -> ! {
 
     // Potentiometers
     let adc = adc::Adc::adc1(dp.ADC1, clocks);
-    let speed_pot = gpioa.pa0.into_analog(&mut gpioa.crl);
+    let delay_pot = gpioa.pa0.into_analog(&mut gpioa.crl);
     let brightness_pot = gpioa.pa1.into_analog(&mut gpioa.crl);
 
     // SPI
@@ -69,7 +77,7 @@ fn main() -> ! {
 
     // Consume everything and get back nice structs :)
     let mut buttons = Buttons::new(up_btn, down_btn, left_btn, right_btn, sel_btn, pause_btn);
-    let mut pots = Pots::new(speed_pot, brightness_pot, adc);
+    let mut pots = Pots::new(delay_pot, brightness_pot, adc);
     let mut matrix = Matrix::new(spi, cs);
     let mut state = State::new();
     let mut life = Life::new();
@@ -78,15 +86,23 @@ fn main() -> ! {
     life.draw_glider();
 
     loop {
+        /* Very simple (and slightly error prone) polling method of input handling.
+         * There are obviously better ways of doing this, but this is a quick project
+         * so this is good enough.
+         */
         buttons.handle(&mut life, &mut state);
         if buttons.pressed {
             delay.delay_ms(150u32);
             buttons.pressed = false;
         }
 
-        let (speed, brightness) = pots.read();
+        // Read the potentiometers and adjust brightness and delay accordingly
+        let (delay_ms, brightness) = pots.read();
         matrix.update_brightness(brightness);
 
+        /* If we are paused, only update the matrix if the crosshair has been moved.
+         * If not paused, update the matrix and generate the next cycle of life.
+         */
         if state.paused && state.xhair_moved {
             matrix.update_leds(&life);
             matrix.draw_xhair(&life, &state);
@@ -94,7 +110,7 @@ fn main() -> ! {
         } else if !state.paused {
             matrix.update_leds(&life);
             life.live();
-            delay.delay_ms(speed);
+            delay.delay_ms(delay_ms);
         }
     }
 }

@@ -7,8 +7,8 @@ use stm32f1xx_hal::{
 
 use crate::game::*;
 
-const ROWS: u8 = 16;
-const COLS: u8 = 16;
+const ROWS: usize = 16;
+const COLS: usize = 16;
 
 pub struct Buttons {
     up: gpio::PA8<Input<PullUp>>,
@@ -53,9 +53,9 @@ impl Buttons {
             }
             if self.select.is_low() {
                 if life.get_cell(state.xhair_col, state.xhair_row) == 1 {
-                    life.cells[state.xhair_row as usize] &= !(1 << (COLS - state.xhair_col - 1));
+                    life.cells[state.xhair_row] &= !(1 << (COLS - state.xhair_col - 1));
                 } else {
-                    life.cells[state.xhair_row as usize] |= 1 << (COLS - state.xhair_col - 1);
+                    life.cells[state.xhair_row] |= 1 << (COLS - state.xhair_col - 1);
                 }
             }
 
@@ -99,23 +99,28 @@ impl Buttons {
 }
 
 pub struct Pots {
-    speed: gpio::PA0<Analog>,
-    brightness: gpio::PA1<Analog>,
+    delay_pot: gpio::PA0<Analog>,
+    brightness_pot: gpio::PA1<Analog>,
     adc: Adc<ADC1>,
 }
 
 impl Pots {
     pub fn read(&mut self) -> (u16, u8) {
-        let speed: u16 = self.adc.read(&mut self.speed).unwrap();
-        let brightness: u16 = self.adc.read(&mut self.brightness).unwrap();
+        let delay_ms: u16 = self.adc.read(&mut self.delay_pot).unwrap();
+        let brightness: u16 = self.adc.read(&mut self.brightness_pot).unwrap();
 
-        (speed / 2, (brightness / 256) as u8)
+        // Not a whole lot of thought put into these divisors, just trial and error
+        (delay_ms / 10, (brightness / 256) as u8)
     }
 
-    pub fn new(speed: gpio::PA0<Analog>, brightness: gpio::PA1<Analog>, adc: Adc<ADC1>) -> Self {
+    pub fn new(
+        delay_pot: gpio::PA0<Analog>,
+        brightness_pot: gpio::PA1<Analog>,
+        adc: Adc<ADC1>,
+    ) -> Self {
         Self {
-            speed,
-            brightness,
+            delay_pot,
+            brightness_pot,
             adc,
         }
     }
